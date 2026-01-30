@@ -121,6 +121,13 @@ class CapCutBlockerApp:
         self.btn_download = ttk.Button(download_frame, text="Download Installer", command=self.start_download)
         self.btn_download.pack(fill=tk.X)
 
+        # --- Progress & Cancel (Hidden by default) ---
+        self.progress_bar = ttk.Progressbar(download_frame, orient="horizontal", mode="determinate")
+        # Pack deliberately omitted here, will be packed in show_download_ui
+        
+        self.btn_cancel = ttk.Button(download_frame, text="Cancel Download", command=self.cancel_action)
+        # Pack deliberately omitted here
+
         # 3. Log Area (Fixed sizing)
         log_frame = ttk.LabelFrame(root, text="Activity Log", padding="10")
         log_frame.pack(fill=tk.BOTH, expand=True, padx=30, pady=(0, 20))
@@ -253,29 +260,71 @@ class CapCutBlockerApp:
         time.sleep(1)
 
     def download_file_native(self, url, save_path):
-        """Native Python download (AV friendly)"""
+        """Native Python download with Progress & Cancel"""
         try:
             import urllib.request
             self.log(f"   Target: {Path(save_path).name}")
             self.log("   Method: Native Python Download...")
             
-            # Simple header to look like a browser user-agent
+            # Setup UI for download
+            self.cancel_download_flag = False
+            self.root.after(0, lambda: self.show_download_ui(True))
+            
+            # Work with a temporary file
+            temp_path = str(save_path) + ".part"
+            
             headers = {'User-Agent': 'Mozilla/5.0'}
             req = urllib.request.Request(url, headers=headers)
             
-            # Download chunks to update UI log or just blocking download
-            # For simplicity in this single-threaded/callback context, we use urlretrieve or read
-            # But urlretrieve is simple and usually works.
-            urllib.request.urlretrieve(url, save_path)
+            with urllib.request.urlopen(req) as response:
+                total_size = int(response.info().get('Content-Length', 0))
+                block_size = 8192 # 8KB chunks
+                downloaded_size = 0
+                
+                with open(temp_path, 'wb') as file:
+                    while True:
+                        if self.cancel_download_flag:
+                            self.log("   ⚠️ Download cancelled by user.")
+                            file.close()
+                            os.remove(temp_path)
+                            return False
+                        
+                        buffer = response.read(block_size)
+                        if not buffer:
+                            break
+                        
+                        downloaded_size += len(buffer)
+                        file.write(buffer)
+                        
+                        # Update progress
+                        if total_size > 0:
+                            percent = (downloaded_size / total_size) * 100
+                            self.root.after(0, lambda p=percent: self.update_progress(p))
+
+            # Move temp file to final path
+            if os.path.exists(temp_path):
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                os.rename(temp_path, save_path)
             
             if os.path.exists(save_path) and os.path.getsize(save_path) > 1000000:
                 self.log("   ✅ Download successful.")
                 return True
             else:
                 self.log("   ⚠️ Download finished but file seems too small.")
+                if os.path.exists(save_path): os.remove(save_path) # Cleanup
+                return False
+
         except Exception as e:
             self.log(f"   ⚠️ Native download error: {e}")
+            if 'temp_path' in locals() and os.path.exists(temp_path):
+                try: os.remove(temp_path)
+                except: pass
+            return False
+        finally:
+            self.root.after(0, lambda: self.show_download_ui(False))
         
+        # Fallback only on error (not cancel)
         self.log("   Switching to Browser Fallback...")
         
         try:
@@ -283,10 +332,35 @@ class CapCutBlockerApp:
             self.log("   Opening direct download link in default browser...")
             webbrowser.open(url)
             messagebox.showinfo("Browser Download", "Automated download failed.\n\nWe have opened the direct download link in your browser.\n\nPlease save the file, then install it manually.")
-            return False # Return False because we didn't download it ourselves strictly speaking
+            return False 
         except:
             self.log("❌ Failed to open browser.")
             return False
+
+    def show_download_ui(self, show):
+        if show:
+            self.progress_bar.pack(fill=tk.X, pady=(0, 5))
+            self.btn_cancel.pack(fill=tk.X)
+            self.btn_download.config(state='disabled')
+            self.version_dropdown.config(state='disabled')
+            self.btn_block.config(state='disabled')
+            self.btn_restore.config(state='disabled')
+        else:
+            self.progress_bar.stop()
+            self.progress_bar.pack_forget()
+            self.btn_cancel.pack_forget()
+            self.btn_download.config(state='normal')
+            self.version_dropdown.config(state='readonly')
+            self.btn_block.config(state='normal')
+            self.btn_restore.config(state='normal')
+
+    def update_progress(self, percent):
+        self.progress_bar['value'] = percent
+        self.root.update_idletasks()
+
+    def cancel_action(self):
+        self.cancel_download_flag = True
+        self.btn_cancel.config(state='disabled') # Prevent double clicks
 
     def clean_old_versions(self, apps_path):
         self.log("🧹 Cleaning update artifacts...")
