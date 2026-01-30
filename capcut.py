@@ -222,7 +222,7 @@ class CapCutBlockerApp:
             downloads_dir = Path(os.path.expanduser("~")) / "Downloads"
             installer_path = downloads_dir / f"capcut_{clean_name}_installer.exe"
             
-            success = self.download_file_bits(download_url, str(installer_path))
+            success = self.download_file_native(download_url, str(installer_path))
             
             if success:
                  self.log("\n✅ Download successfully saved to Downloads folder.")
@@ -233,7 +233,7 @@ class CapCutBlockerApp:
                  
                  messagebox.showinfo("Download Complete", f"Installer saved to your Downloads folder:\n\n{installer_path}\n\nPlease run it manually to install CapCut.")
             else:
-                # The browser fallback logic is inside download_file_bits, so if we are here and False, main error happened
+                # The browser fallback logic is inside download_file_native, so if we are here and False, main error happened
                 pass
 
         except Exception as e:
