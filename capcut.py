@@ -414,7 +414,7 @@ class CapCutBlockerApp:
                     # Try to restore from backup
                     bak_file = backup_dir / f"{fp.name}.bak"
                     
-                    if bak_file.exists():
+                    if bak_file.exists() and bak_file.stat().st_size > 0:
                         try:
                             shutil.copy2(bak_file, fp)
                             self.log(f"   ✅ Restored original: {name}")
@@ -422,9 +422,9 @@ class CapCutBlockerApp:
                             self.log(f"   ❌ Restore failed for {name}: {e}")
                     else:
                         # Logic for determining if it's a dummy file we should delete
-                        # If it's empty or tiny (like our touched files), delete it
+                        # If it's exactly 0 bytes (like our touched files), delete it
                         try:
-                            if fp.stat().st_size < 100: 
+                            if fp.stat().st_size == 0: 
                                  self.remove_readonly(fp)
                                  fp.unlink()
                                  self.log(f"   🗑️ Removed dummy file: {name}")
@@ -450,7 +450,6 @@ class CapCutBlockerApp:
             fp = userdata_path / f
             if fp.exists():
                 try: 
-                    import shutil
                     shutil.rmtree(fp)
                 except: pass
 
