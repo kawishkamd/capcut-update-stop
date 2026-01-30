@@ -311,10 +311,46 @@ class CapCutBlockerApp:
     def get_backup_dir(self):
         return Path(os.getenv('LOCALAPPDATA')) / "CapCutUpdateBlocker" / "OriginalSettings"
 
+    def is_file_blocked(self, file_path):
+        """Check if file appears to be already blocked/modified"""
+        try:
+            if not file_path.exists(): return False
+            
+            # Check 1: File size (Blocked executables are usually 0 bytes or very small)
+            if file_path.suffix.lower() == '.exe':
+                # Real update.exe is usually > 10MB. 1MB is a safe lower bound.
+                if file_path.stat().st_size < 1024 * 1024: 
+                    return True
+            
+            # Check 2: Content checks for configure.ini
+            if file_path.name.lower() == 'configure.ini':
+                # If we can't read it, assume it might be locked/crypto, but let's try
+                try:
+                    with open(file_path, 'r', errors='ignore') as f:
+                        content = f.read()
+                        # If it has the blocked version string, it's ours
+                        if 'last_version=1.0.0.0' in content:
+                            return True
+                except: pass
+
+            # Check 3: ProductInfo.xml (Blocker creates empty file)
+            if file_path.name.lower() == 'productinfo.xml':
+                 if file_path.stat().st_size == 0: return True
+
+            return False
+        except:
+            return False
+
     def backup_config(self, file_path):
         """Save original file before we modify it"""
         try:
             if not file_path.exists(): return
+
+            # SAFETY CHECK: Don't backup if it looks like it's ALREADY blocked
+            if self.is_file_blocked(file_path):
+                self.log(f"   ⚠️ Skipping backup of {file_path.name} (appears already blocked)")
+                return
+
             backup_dir = self.get_backup_dir()
             backup_dir.mkdir(parents=True, exist_ok=True)
             
