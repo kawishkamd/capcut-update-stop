@@ -252,20 +252,30 @@ class CapCutBlockerApp:
             except: pass
         time.sleep(1)
 
-    def download_file_bits(self, url, save_path):
-        """Try BITS, fallback to Browser"""
-        self.log(f"   Target: {Path(save_path).name}")
-        self.log("   Method: BITS (Background Transfer)...")
-        
-        ps_command = f'Start-BitsTransfer -Source "{url}" -Destination "{save_path}" -Priority Foreground'
+    def download_file_native(self, url, save_path):
+        """Native Python download (AV friendly)"""
         try:
-            subprocess.run(["powershell", "-NoProfile", "-Command", ps_command], capture_output=True, check=True)
+            import urllib.request
+            self.log(f"   Target: {Path(save_path).name}")
+            self.log("   Method: Native Python Download...")
+            
+            # Simple header to look like a browser user-agent
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            req = urllib.request.Request(url, headers=headers)
+            
+            # Download chunks to update UI log or just blocking download
+            # For simplicity in this single-threaded/callback context, we use urlretrieve or read
+            # But urlretrieve is simple and usually works.
+            urllib.request.urlretrieve(url, save_path)
+            
             if os.path.exists(save_path) and os.path.getsize(save_path) > 1000000:
+                self.log("   ✅ Download successful.")
                 return True
-        except:
-            pass
+            else:
+                self.log("   ⚠️ Download finished but file seems too small.")
+        except Exception as e:
+            self.log(f"   ⚠️ Native download error: {e}")
         
-        self.log("⚠️ BITS failed (Firewall/Network issue).")
         self.log("   Switching to Browser Fallback...")
         
         try:
