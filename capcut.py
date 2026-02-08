@@ -56,6 +56,7 @@ class CapCutBlockerApp:
         # Version Map
         self.versions = {
             "v1.0.5 (Ultra Legacy)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_1_0_5_80_capcutpc_0.exe",
+            "v1.5.0": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_1_5_0_230_capcutpc_0.exe",
             "v2.0.0 (Legacy Stable)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_2_0_0_357_capcutpc_0.exe",
             "v3.0.0 (Split)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_split_3_0_0_1015_capcutpc_0.exe",
             "v4.0.0 (Stable)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_4_0_0_1539_capcutpc_0_creatortool.exe",
