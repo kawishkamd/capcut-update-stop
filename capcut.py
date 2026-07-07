@@ -10,6 +10,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
+import webbrowser
 
 # --- Core Helper Functions ---
 
@@ -41,12 +42,19 @@ class CapCutBlockerApp:
         self.root.title("CapCut Update Blocker")
         self.root.geometry("500x700")
         self.root.resizable(True, True)
-        self.root.configure(bg="#FFFFFF")
         
-        # Color & Font Configuration
-        self.accent_color = "#000000"  # Sleek Black
-        self.bg_color = "#FFFFFF"
-        self.text_dim = "#666666"
+        # Color & Font Configuration (Modern Dark Mode)
+        self.bg_color = "#121214"          # Dark Obsidian background
+        self.card_bg = "#1A1A1D"           # Card frame background
+        self.text_primary = "#FFFFFF"      # Crisp white text
+        self.text_dim = "#8E8E93"          # Muted gray text
+        self.border_color = "#2A2A2E"      # Thin border line
+        
+        # Action button colors
+        self.accent_color = "#007AFF"      # Accent Blue
+        self.accent_hover = "#0A84FF"      # Hover state Blue
+        
+        self.root.configure(bg=self.bg_color)
         
         self.header_font = font.Font(family="Segoe UI", size=16, weight="bold")
         self.normal_font = font.Font(family="Segoe UI", size=10)
@@ -66,10 +74,80 @@ class CapCutBlockerApp:
         style = ttk.Style()
         style.theme_use('clam')
         style.configure("TFrame", background=self.bg_color)
-        style.configure("TLabel", background=self.bg_color, font=self.normal_font)
-        style.configure("TButton", font=self.button_font, padding=10)
-        style.configure("TLabelframe", background=self.bg_color, padding=15)
-        style.configure("TLabelframe.Label", background=self.bg_color, font=('Segoe UI', 10, 'bold'))
+        style.configure("TLabel", background=self.bg_color, foreground=self.text_primary, font=self.normal_font)
+        
+        # Card style (LabelFrame)
+        style.configure("TLabelframe", background=self.card_bg, bordercolor=self.border_color, borderwidth=1, relief="flat")
+        style.configure("TLabelframe.Label", background=self.card_bg, foreground=self.text_primary, font=('Segoe UI', 10, 'bold'))
+        
+        # Primary buttons styling
+        style.configure("TButton",
+                        font=self.button_font,
+                        background=self.accent_color,
+                        foreground="#FFFFFF",
+                        borderwidth=0,
+                        focuscolor="none",
+                        padding=(10, 8))
+        style.map("TButton",
+                  background=[("active", self.accent_hover), ("disabled", "#2C2C2E")],
+                  foreground=[("disabled", "#555558")])
+                  
+        # Secondary buttons styling (e.g. Restore, Support, Cancel)
+        style.configure("Secondary.TButton",
+                        font=self.button_font,
+                        background="#2C2C2E",
+                        foreground=self.text_primary,
+                        borderwidth=0,
+                        focuscolor="none",
+                        padding=(10, 8))
+        style.map("Secondary.TButton",
+                  background=[("active", "#3A3A3C"), ("disabled", "#1E1E20")],
+                  foreground=[("disabled", "#555558")])
+                  
+        # Combobox customization
+        style.configure("TCombobox",
+                        fieldbackground=self.card_bg,
+                        background=self.card_bg,
+                        foreground=self.text_primary,
+                        bordercolor=self.border_color,
+                        arrowcolor=self.text_primary,
+                        arrowsize=12)
+        style.map("TCombobox",
+                  fieldbackground=[("readonly", self.card_bg)],
+                  selectbackground=[("readonly", self.accent_color)],
+                  selectforeground=[("readonly", "#FFFFFF")])
+                  
+        # Option mappings for combobox listbox
+        self.root.option_add("*TCombobox*Listbox.background", self.card_bg)
+        self.root.option_add("*TCombobox*Listbox.foreground", self.text_primary)
+        self.root.option_add("*TCombobox*Listbox.selectBackground", self.accent_color)
+        self.root.option_add("*TCombobox*Listbox.selectForeground", "#FFFFFF")
+        self.root.option_add("*TCombobox*Listbox.font", self.normal_font)
+        self.root.option_add("*TCombobox*Listbox.borderWidth", 0)
+        self.root.option_add("*TCombobox*Listbox.highlightThickness", 0)
+        
+        # Scrollbar customization
+        style.configure("Vertical.TScrollbar",
+                        background="#2C2C2E",
+                        troughcolor=self.bg_color,
+                        bordercolor=self.bg_color,
+                        arrowcolor=self.text_dim,
+                        arrowsize=0,
+                        width=10)
+        style.map("Vertical.TScrollbar",
+                  background=[("active", "#3A3A3C")])
+
+        # Progressbar styling
+        style.configure("TProgressbar",
+                        thickness=6,
+                        troughcolor="#1A1A1D",
+                        background=self.accent_color,
+                        bordercolor=self.border_color,
+                        lightcolor=self.accent_color,
+                        darkcolor=self.accent_color)
+                        
+        # Separator styling
+        style.configure("TSeparator", background=self.border_color)
 
         # ---- UI Layout ----
         
@@ -87,54 +165,68 @@ class CapCutBlockerApp:
         main_content = ttk.Frame(root, padding="30 20 30 10")
         main_content.pack(fill=tk.BOTH, expand=False)
 
-        # --- Status Section ---
-        status_frame = ttk.Frame(main_content)
-        status_frame.pack(fill=tk.X, pady=(0, 20))
+        # --- Status Section (Styled Card) ---
+        self.status_frame = tk.Frame(main_content, bg="#1A1A1D", highlightthickness=1, highlightbackground=self.border_color, padx=15, pady=12)
+        self.status_frame.pack(fill=tk.X, pady=(0, 20))
         
-        self.status_label = ttk.Label(status_frame, text="Checking status...", font=self.normal_font)
-        self.status_label.pack(anchor=tk.W)
+        self.status_dot = tk.Label(self.status_frame, text="●", font=('Segoe UI', 12), bg="#1A1A1D", fg="#8E8E93")
+        self.status_dot.pack(side=tk.LEFT, padx=(0, 8))
+        
+        self.status_label = tk.Label(self.status_frame, text="Checking status...", font=('Segoe UI', 10, 'bold'), bg="#1A1A1D", fg="#E5E5EA")
+        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True, anchor=tk.W)
 
         # --- Protection Control Section ---
-        controls_lf = ttk.LabelFrame(main_content, text="Protection Controls", padding="15")
+        controls_lf = ttk.LabelFrame(main_content, text="Protection Controls")
         controls_lf.pack(fill=tk.X, pady=(0, 20))
 
-        # Grid layout for buttons to keep them close
-        self.btn_block = ttk.Button(controls_lf, text="🛡️  Block Updates", command=self.start_block_updates)
-        self.btn_block.pack(fill=tk.X, pady=(0, 5))
+        self.btn_block = ttk.Button(controls_lf, text="🛡️  Block Updates", command=self.start_block_updates, style="TButton")
+        self.btn_block.pack(fill=tk.X, pady=(0, 6))
         
-        self.btn_restore = ttk.Button(controls_lf, text="🔓  Restore Original", command=self.start_restore)
-        self.btn_restore.pack(fill=tk.X)
+        self.btn_restore = ttk.Button(controls_lf, text="🔓  Restore Original", command=self.start_restore, style="Secondary.TButton")
+        self.btn_restore.pack(fill=tk.X, pady=(0, 6))
+        
+        self.btn_support = ttk.Button(controls_lf, text="☕  Support on Ko-Fi", command=self.open_support, style="Secondary.TButton")
+        self.btn_support.pack(fill=tk.X)
 
         # --- Divider ---
         ttk.Separator(main_content, orient='horizontal').pack(fill=tk.X, pady=(0, 20))
 
         # --- Download Section ---
-        download_frame = ttk.Frame(main_content)
-        download_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        ttk.Label(download_frame, text="Installer Downloader", font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W, pady=(0, 5))
+        download_lf = ttk.LabelFrame(main_content, text="Installer Downloader")
+        download_lf.pack(fill=tk.X, pady=(0, 20))
         
         self.version_var = tk.StringVar()
-        self.version_dropdown = ttk.Combobox(download_frame, textvariable=self.version_var, values=list(self.versions.keys()), state="readonly")
+        self.version_dropdown = ttk.Combobox(download_lf, textvariable=self.version_var, values=list(self.versions.keys()), state="readonly")
         self.version_dropdown.pack(fill=tk.X, pady=(0, 8))
         self.version_dropdown.current(1)
 
-        self.btn_download = ttk.Button(download_frame, text="Download Installer", command=self.start_download)
+        self.btn_download = ttk.Button(download_lf, text="Download Installer", command=self.start_download, style="TButton")
         self.btn_download.pack(fill=tk.X)
 
         # --- Progress & Cancel (Hidden by default) ---
-        self.progress_bar = ttk.Progressbar(download_frame, orient="horizontal", mode="determinate")
-        # Pack deliberately omitted here, will be packed in show_download_ui
+        self.progress_bar = ttk.Progressbar(download_lf, orient="horizontal", mode="determinate", style="TProgressbar")
         
-        self.btn_cancel = ttk.Button(download_frame, text="Cancel Download", command=self.cancel_action)
-        # Pack deliberately omitted here
+        self.btn_cancel = ttk.Button(download_lf, text="Cancel Download", command=self.cancel_action, style="Secondary.TButton")
 
         # 3. Log Area (Fixed sizing)
-        log_frame = ttk.LabelFrame(root, text="Activity Log", padding="10")
+        log_frame = ttk.LabelFrame(root, text="Activity Log")
         log_frame.pack(fill=tk.BOTH, expand=True, padx=30, pady=(0, 20))
         
-        self.log_area = scrolledtext.ScrolledText(log_frame, height=6, state='disabled', font=self.mono_font, relief=tk.FLAT, bg="#F8F9FA")
-        self.log_area.pack(fill=tk.BOTH, expand=True)
+        # Internal container for text + scrollbar
+        log_inner = ttk.Frame(log_frame)
+        log_inner.pack(fill=tk.BOTH, expand=True)
+        
+        self.log_area = tk.Text(log_inner, height=6, state='disabled', font=self.mono_font, relief=tk.FLAT, bg="#0E0E11", fg="#A1A1AA", insertbackground="#FFFFFF", highlightthickness=0)
+        self.log_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.log_area.tag_config("success", foreground="#30D158")
+        self.log_area.tag_config("error", foreground="#FF453A")
+        self.log_area.tag_config("warning", foreground="#FF9F0A")
+        
+        scrollbar = ttk.Scrollbar(log_inner, orient="vertical", command=self.log_area.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.log_area.configure(yscrollcommand=scrollbar.set)
 
         # Initial Logic
         self.refresh_status()
@@ -142,7 +234,17 @@ class CapCutBlockerApp:
     def log(self, message):
         """Thread-safe logging"""
         self.log_area.config(state='normal')
-        self.log_area.insert(tk.END, message + "\n")
+        
+        # Check message content for simple tag coloring
+        if "✅" in message or "🎉" in message or "SUCCESS" in message:
+            self.log_area.insert(tk.END, message + "\n", "success")
+        elif "❌" in message or "Critical Error" in message or "failed" in message.lower():
+            self.log_area.insert(tk.END, message + "\n", "error")
+        elif "⚠️" in message:
+            self.log_area.insert(tk.END, message + "\n", "warning")
+        else:
+            self.log_area.insert(tk.END, message + "\n")
+            
         self.log_area.see(tk.END)
         self.log_area.config(state='disabled')
 
@@ -150,9 +252,13 @@ class CapCutBlockerApp:
         """Update status label based on installation"""
         capcut_path = get_capcut_path()
         if capcut_path.exists():
-            self.status_label.config(text=f"✅ CapCut detected at: {capcut_path}", foreground="green")
+            self.status_frame.config(bg="#152D1D", highlightbackground="#1C4D2E")
+            self.status_dot.config(text="●", fg="#30D158", bg="#152D1D")
+            self.status_label.config(text=f"CapCut active at: {capcut_path.name}", fg="#30D158", bg="#152D1D")
         else:
-            self.status_label.config(text="⚠️ CapCut NOT detected. Please download and install it first.", foreground="#D32F2F")
+            self.status_frame.config(bg="#2D1515", highlightbackground="#4D1C1C")
+            self.status_dot.config(text="●", fg="#FF453A", bg="#2D1515")
+            self.status_label.config(text="CapCut not detected. Install to proceed.", fg="#FF453A", bg="#2D1515")
 
     def run_threaded(self, target):
         thread = threading.Thread(target=target)
@@ -163,6 +269,7 @@ class CapCutBlockerApp:
         self.btn_block.config(state=state)
         self.btn_download.config(state=state)
         self.btn_restore.config(state=state)
+        self.btn_support.config(state=state)
         self.version_dropdown.config(state="readonly" if state == "normal" else "disabled")
 
     # --- Actions ---
@@ -210,6 +317,13 @@ class CapCutBlockerApp:
             messagebox.showerror("Error", str(e))
         finally:
             self.root.after(0, lambda: self.set_buttons_state("normal"))
+
+    def open_support(self):
+        try:
+            webbrowser.open("https://ko-fi.com/kayz")
+            self.log("☕ Opening support link: https://ko-fi.com/kayz")
+        except Exception as e:
+            self.log(f"❌ Error opening support link: {e}")
 
     def start_download(self):
         version_name = self.version_var.get()
@@ -340,12 +454,13 @@ class CapCutBlockerApp:
 
     def show_download_ui(self, show):
         if show:
-            self.progress_bar.pack(fill=tk.X, pady=(0, 5))
+            self.progress_bar.pack(fill=tk.X, pady=(8, 6))
             self.btn_cancel.pack(fill=tk.X)
             self.btn_download.config(state='disabled')
             self.version_dropdown.config(state='disabled')
             self.btn_block.config(state='disabled')
             self.btn_restore.config(state='disabled')
+            self.btn_support.config(state='disabled')
         else:
             self.progress_bar.stop()
             self.progress_bar.pack_forget()
@@ -354,6 +469,7 @@ class CapCutBlockerApp:
             self.version_dropdown.config(state='readonly')
             self.btn_block.config(state='normal')
             self.btn_restore.config(state='normal')
+            self.btn_support.config(state='normal')
 
     def update_progress(self, percent):
         self.progress_bar['value'] = percent
