@@ -50,7 +50,7 @@ jobs:
       shell: bash
     
     - name: Upload executable as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4.6.2
       with:
         name: CapCut_Update_Blocker_Windows
         path: dist/CapCut_Update_Blocker.exe
