@@ -68,14 +68,13 @@ class CapCutBlockerApp:
         self.button_font = font.Font(family="Segoe UI", size=10, weight="bold")
         self.mono_font = font.Font(family="Consolas", size=9)
 
-        # Version Map
+        # Version Map (Curated list with updated CDN links)
         self.versions = {
-            "v1.0.5 (Ultra Legacy)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_1_0_5_80_capcutpc_0.exe",
-            "v1.5.0": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_1_5_0_230_capcutpc_0.exe",
-            "v2.0.0 (Legacy Stable)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_2_0_0_357_capcutpc_0.exe",
-            "v3.0.0 (Split)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_split_3_0_0_1015_capcutpc_0.exe",
-            "v4.0.0 (Stable)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_4_0_0_1539_capcutpc_0_creatortool.exe",
-            "v5.0.0 (Latest Supported)": "https://lf16-capcut.faceulv.com/obj/capcutpc-packages-us/packages/CapCut_5_0_0_1886_capcutpc_0_creatortool.exe"
+            "v1.0.5 (Ultra Legacy)": "https://sf16-web-tos-buz.capcutcdn-us.com/obj/capcut-web-buz-tx/packages/CapCut_1_0_5_80_capcutpc_0.exe",
+            "v1.5.0 (Sweet Spot)": "https://sf16-web-tos-buz.capcutcdn-us.com/obj/capcut-web-buz-tx/packages/CapCut_1_5_0_230_capcutpc_0.exe",
+            "v2.0.0 (Free Features Stable)": "https://sf16-web-tos-buz.capcutcdn-us.com/obj/capcut-web-buz-tx/packages/CapCut_2_0_0_357_capcutpc_0.exe",
+            "v7.0.0": "https://sf16-web-tos-buz.capcutcdn-us.com/obj/capcut-web-buz-tx/packages/CapCut_7_0_0_2865_capcutpc_0_creatortool.exe",
+            "v8.2.0 (Latest Supported)": "https://sf16-web-tos-buz.capcutcdn-us.com/obj/capcut-web-buz-tx/packages/CapCut_8_2_0_3462_capcutpc_0_creatortool.exe"
         }
 
         style = ttk.Style()
