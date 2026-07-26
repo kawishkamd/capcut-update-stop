@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, font
 import json
 import shutil
+import stat
 from datetime import datetime
 from pathlib import Path
 import webbrowser
@@ -289,13 +290,16 @@ class CapCutBlockerApp:
             self.log("-" * 50)
             self.log("🚀 Starting blocking process...")
             
+            if self.is_capcut_running():
+                self.log("❌ Error: CapCut is still running.")
+                messagebox.showwarning("CapCut is Running", "Please save your work and close CapCut before proceeding.")
+                return
+
             capcut_path = get_capcut_path()
             if not capcut_path.exists():
                  # Create it if it doesn't exist (user might want to pre-block)
                  self.log(f"   Creating directory: {capcut_path}")
                  capcut_path.mkdir(parents=True, exist_ok=True)
-
-            self.kill_capcut_processes()
             
             apps_path = capcut_path / "Apps"
             userdata_path = capcut_path / "User Data"
@@ -371,14 +375,33 @@ class CapCutBlockerApp:
 
     # --- Logic Implementations ---
     
-    def kill_capcut_processes(self):
-        self.log("🔴 Closing any running CapCut processes...")
-        processes = ["CapCut.exe", "CapCutService.exe"]
-        for proc in processes:
-            try:
-                subprocess.run(["taskkill", "/F", "/IM", proc], capture_output=True, check=False)
-            except: pass
-        time.sleep(1)
+    def is_capcut_running(self):
+        self.log("🔍 Checking if CapCut is running...")
+        try:
+            output = subprocess.check_output(
+                ["tasklist", "/FI", "IMAGENAME eq CapCut.exe", "/NH"], 
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                text=True
+            )
+            return "CapCut.exe" in output
+        except:
+            return False
+
+    def remove_readonly_error_handler(self, func, path, exc_info):
+        """Error handler for shutil.rmtree to remove read-only attributes"""
+        try:
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        except Exception:
+            pass
+
+    def get_dir_size(self, path):
+        total = 0
+        for p in Path(path).rglob('*'):
+            if p.is_file():
+                try: total += p.stat().st_size
+                except: pass
+        return total
 
     def download_file_native(self, url, save_path):
         """Native Python download with Progress & Cancel"""
@@ -506,12 +529,19 @@ class CapCutBlockerApp:
         active_version = version_dirs[0]
         self.log(f"   Protecting active version: {active_version.name}")
         
+        total_freed = 0
         for item in version_dirs[1:]:
             try:
-                shutil.rmtree(item)
+                size = self.get_dir_size(item)
+                shutil.rmtree(item, onerror=self.remove_readonly_error_handler)
+                total_freed += size
                 self.log(f"   Deleted old version: {item.name}")
             except Exception as e:
                  self.log(f"   Error cleaning {item.name}: {e}")
+                 
+        if total_freed > 0:
+            mb = total_freed / (1024 * 1024)
+            self.log(f"   ✅ Cleaned {mb:.1f} MB of old versions.")
 
     # --- Restore & Reverse logic ---
 
@@ -590,12 +620,16 @@ class CapCutBlockerApp:
         try:
             self.log("-" * 50)
             self.log("🔓 Reversing blocker...")
+            
+            if self.is_capcut_running():
+                self.log("❌ Error: CapCut is still running.")
+                messagebox.showwarning("CapCut is Running", "Please save your work and close CapCut before proceeding.")
+                return
+
             capcut_path = get_capcut_path()
             if not capcut_path.exists():
                 self.log("❌ Error: CapCut installation not found.")
                 return
-
-            self.kill_capcut_processes()
             
             apps_path = capcut_path / "Apps"
             dl_path = capcut_path / "User Data" / "Download"
@@ -653,12 +687,19 @@ class CapCutBlockerApp:
     def clean_update_cache(self, userdata_path):
         self.log("🗑️ Cleaning update cache folders...")
         folders = ["Cache", "Shadow_Cache", "Smart_Crop", "update_cache"]
+        total_freed = 0
         for f in folders:
             fp = userdata_path / f
             if fp.exists():
                 try: 
-                    shutil.rmtree(fp)
+                    size = self.get_dir_size(fp)
+                    shutil.rmtree(fp, onerror=self.remove_readonly_error_handler)
+                    total_freed += size
                 except: pass
+                
+        if total_freed > 0:
+            mb = total_freed / (1024 * 1024)
+            self.log(f"   ✅ Cleaned {mb:.1f} MB of cache.")
 
     def lock_configure_ini(self, apps_path):
         self.log("🔒 Locking configure.ini...")
