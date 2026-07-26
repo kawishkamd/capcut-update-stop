@@ -24,17 +24,23 @@ def is_admin():
 def run_as_admin():
     """Relaunch script with admin privileges"""
     if sys.platform == 'win32':
-        ctypes.windll.shell32.ShellExecuteW(
+        result = ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, " ".join(sys.argv), None, 1
         )
+        if result <= 32:
+            ctypes.windll.user32.MessageBoxW(
+                None, 
+                "Administrator privileges are required to lock CapCut configuration files. The application will now close.", 
+                "Administrator Required", 
+                0x30
+            )
 
 def get_capcut_path():
     """Get CapCut installation path"""
     localappdata = os.getenv('LOCALAPPDATA')
     if not localappdata:
-        return Path("C:/") 
-    capcut_path = Path(localappdata) / "CapCut"
-    return capcut_path
+        return Path.home() / "AppData" / "Local" / "CapCut"
+    return Path(localappdata) / "CapCut"
 
 class CapCutBlockerApp:
     def __init__(self, root):
@@ -393,7 +399,7 @@ class CapCutBlockerApp:
             
             with urllib.request.urlopen(req) as response:
                 total_size = int(response.info().get('Content-Length', 0))
-                block_size = 8192 # 8KB chunks
+                block_size = 131072 # 128KB chunks for faster downloading
                 downloaded_size = 0
                 
                 with open(temp_path, 'wb') as file:
