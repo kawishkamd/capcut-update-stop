@@ -254,17 +254,45 @@ class CapCutBlockerApp:
         self.log_area.see(tk.END)
         self.log_area.config(state='disabled')
 
+    def is_capcut_fully_installed(self):
+        """Check if CapCut is fully installed by looking for the main executable."""
+        capcut_path = get_capcut_path()
+        if not capcut_path.exists(): 
+            return False
+            
+        apps_path = capcut_path / "Apps"
+        if not apps_path.exists(): 
+            return False
+            
+        # Check directly in Apps folder first (some setups place it here)
+        if (apps_path / "CapCut.exe").exists():
+            return True
+            
+        try:
+            # Check if there is a version folder containing CapCut.exe
+            for item in apps_path.iterdir():
+                if item.is_dir() and item.name and item.name[0].isdigit():
+                    if (item / "CapCut.exe").exists():
+                        return True
+        except:
+            pass
+            
+        return False
+
     def refresh_status(self):
         """Update status label based on installation"""
         capcut_path = get_capcut_path()
-        if capcut_path.exists():
+        if self.is_capcut_fully_installed():
             self.status_frame.config(bg="#152D1D", highlightbackground="#1C4D2E")
             self.status_dot.config(text="●", fg="#30D158", bg="#152D1D")
             self.status_label.config(text=f"CapCut active at: {capcut_path.name}", fg="#30D158", bg="#152D1D")
         else:
             self.status_frame.config(bg="#2D1515", highlightbackground="#4D1C1C")
             self.status_dot.config(text="●", fg="#FF453A", bg="#2D1515")
-            self.status_label.config(text="CapCut not detected. Install to proceed.", fg="#FF453A", bg="#2D1515")
+            self.status_label.config(text="CapCut not detected or still installing...", fg="#FF453A", bg="#2D1515")
+            
+        # Schedule this function to run again in 2000ms (2 seconds) for real-time updates
+        self.root.after(2000, self.refresh_status)
 
     def run_threaded(self, target):
         thread = threading.Thread(target=target)
@@ -456,14 +484,14 @@ class CapCutBlockerApp:
             else:
                 self.log("   ⚠️ Download finished but file seems too small.")
                 if os.path.exists(save_path): os.remove(save_path) # Cleanup
-                return False
+                # Let it fall through to browser fallback
 
         except Exception as e:
             self.log(f"   ⚠️ Native download error: {e}")
             if 'temp_path' in locals() and os.path.exists(temp_path):
                 try: os.remove(temp_path)
                 except: pass
-            return False
+            # Let it fall through to browser fallback
         finally:
             self.root.after(0, lambda: self.show_download_ui(False))
         
@@ -514,7 +542,7 @@ class CapCutBlockerApp:
         # Identify version folders (names like 1.5.0, 2.0.0)
         version_dirs = []
         for item in apps_path.iterdir():
-            if item.is_dir() and item.name[0].isdigit():
+            if item.is_dir() and item.name and item.name[0].isdigit():
                 version_dirs.append(item)
         
         if not version_dirs:
