@@ -281,11 +281,10 @@ class CapCutBlockerApp:
 
     def refresh_status(self):
         """Update status label based on installation"""
-        capcut_path = get_capcut_path()
         if self.is_capcut_fully_installed():
             self.status_frame.config(bg="#152D1D", highlightbackground="#1C4D2E")
             self.status_dot.config(text="●", fg="#30D158", bg="#152D1D")
-            self.status_label.config(text=f"CapCut active at: {capcut_path.name}", fg="#30D158", bg="#152D1D")
+            self.status_label.config(text="CapCut Installed and Ready", fg="#30D158", bg="#152D1D")
         else:
             self.status_frame.config(bg="#2D1515", highlightbackground="#4D1C1C")
             self.status_dot.config(text="●", fg="#FF453A", bg="#2D1515")
