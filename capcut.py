@@ -46,6 +46,18 @@ def get_transparent_logo_bytes():
     # 3. Direct in-memory base64 fallback (guaranteed to succeed)
     return base64.b64decode(TRANSPARENT_LOGO_BASE64)
 
+def enable_high_dpi_awareness():
+    """Enable High-DPI awareness on Windows to prevent blurry text and UI scaling."""
+    if sys.platform == 'win32':
+        try:
+            # PROCESS_SYSTEM_DPI_AWARE = 1
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except Exception:
+                pass
+
 def is_admin():
     """Check if script is running with admin privileges"""
     try:
@@ -993,6 +1005,8 @@ class CapCutBlockerApp:
         return all_good
 
 if __name__ == "__main__":
+    enable_high_dpi_awareness()
+
     if not is_admin():
         # Re-run as admin if needed
         run_as_admin()
