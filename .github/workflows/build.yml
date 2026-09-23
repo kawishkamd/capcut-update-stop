@@ -30,7 +30,7 @@ jobs:
     
     - name: Build Windows executable
       run: |
-        pyinstaller --onefile --name "CapCut_Update_Blocker" --noconsole --uac-admin --icon=NONE --version-file version_info.txt capcut.py
+        pyinstaller --onefile --name "CapCut_Update_Blocker" --noconsole --uac-admin --icon=NONE --version-file version_info.txt --add-data "assets/CClogo-w.png;assets" capcut.py
     
     - name: Verify build
       run: |
@@ -67,6 +67,7 @@ jobs:
           ### Features
           - 🔒 Locks CapCut to version 1.5.0
           - 🚫 Blocks all auto-updates
+          - 🎯 Removes CClogo-w.png export watermark (replaces with transparent PNG)
           - 📥 Downloads CapCut 1.5.0 if not installed
           - ✅ Works on Windows 7, 8, 10, 11
           

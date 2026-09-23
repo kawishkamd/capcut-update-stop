@@ -9,11 +9,42 @@ from tkinter import ttk, messagebox, scrolledtext, font
 import json
 import shutil
 import stat
+import base64
 from datetime import datetime
 from pathlib import Path
 import webbrowser
 
 # --- Core Helper Functions ---
+
+# Base64 fallback for 468x192 1-bit transparent CClogo-w.png (179 bytes)
+TRANSPARENT_LOGO_BASE64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAdQAAADAAQMAAACH2QAWAAAAAXNSR0IB2cksfwAAAAlwSFlzAAAL"
+    "EwAACxMBAJqcGAAAAANQTFRFAAAAp3o92gAAAAF0Uk5TAEDm2GYAAAA8SURBVHic7cuhAQAADAKg"
+    "+f/T+8Fggk6uF9d1Xdd1Xdd1Xdd1Xdd1Xdd1Xdd1Xdd1Xdd1Xdd1Xdd13eF9JH8AwYd+fEQAAAAA"
+    "SUVORK5CYII="
+)
+
+def get_transparent_logo_bytes():
+    """Load transparent CClogo-w.png bytes from PyInstaller bundle, local assets, or embedded base64."""
+    # 1. PyInstaller bundled temporary directory
+    if hasattr(sys, '_MEIPASS'):
+        bundle_path = Path(sys._MEIPASS) / "assets" / "CClogo-w.png"
+        if bundle_path.exists():
+            try:
+                return bundle_path.read_bytes()
+            except Exception:
+                pass
+
+    # 2. Local development repository assets folder
+    local_path = Path(__file__).resolve().parent / "assets" / "CClogo-w.png"
+    if local_path.exists():
+        try:
+            return local_path.read_bytes()
+        except Exception:
+            pass
+
+    # 3. Direct in-memory base64 fallback (guaranteed to succeed)
+    return base64.b64decode(TRANSPARENT_LOGO_BASE64)
 
 def is_admin():
     """Check if script is running with admin privileges"""
@@ -339,6 +370,7 @@ class CapCutBlockerApp:
             self.block_productinfo_xml(apps_path)
             self.block_update_exe(userdata_path)
             self.block_apps_update_exe(apps_path) # Added per user feedback
+            self.replace_watermark_logo(apps_path)
             
             self.log("\n🔍 Verifying locks...")
             if self.verify_locks(capcut_path):
@@ -600,6 +632,10 @@ class CapCutBlockerApp:
             if file_path.name.lower() == 'productinfo.xml':
                  if file_path.stat().st_size == 0: return True
 
+            # Check 4: CClogo-w.png (Replacement transparent image is small <= 1KB)
+            if file_path.name.lower() == 'cclogo-w.png':
+                if file_path.stat().st_size <= 1024: return True
+
             return False
         except:
             return False
@@ -700,6 +736,8 @@ class CapCutBlockerApp:
                         except Exception as e:
                             self.log(f"   ❌ Delete failed for {name}: {e}")
 
+            self.restore_watermark_logo(apps_path)
+
             self.log("\n🎉 SUCCESS! Blocker has been reversed.")
             messagebox.showinfo("Success", "Blocker reversed.\n\nCapCut is now back to its default state.")
             
@@ -792,6 +830,135 @@ class CapCutBlockerApp:
             os.chmod(exe_path, 0o444)
             self.log("   Set to Read-Only (attrib +r).")
         except Exception as e: self.log(f"❌ Error: {e}")
+
+    def replace_watermark_logo(self, apps_path):
+        """Replace CClogo-w.png watermark with transparent PNG if present, then set to Read-Only."""
+        self.log("🎯 Checking for export watermark logo (CClogo-w.png)...")
+        if not apps_path.exists():
+            return
+            
+        found_any = False
+        try:
+            for item in sorted(apps_path.iterdir()):
+                if item.is_dir() and item.name and item.name[0].isdigit():
+                    resources_dir = item / "Resources"
+                    if not resources_dir.exists() or not resources_dir.is_dir():
+                        continue
+                        
+                    # Case-insensitive search for CClogo-w.png
+                    target_logo = None
+                    try:
+                        for f in resources_dir.iterdir():
+                            if f.is_file() and f.name.lower() == "cclogo-w.png":
+                                target_logo = f
+                                break
+                    except Exception:
+                        continue
+                        
+                    if not target_logo or not target_logo.exists():
+                        continue
+                        
+                    found_any = True
+                    self.log(f"   Found watermark in v{item.name}: {target_logo.name}")
+                    
+                    # Backup original if not already blocked/transparent
+                    try:
+                        if not self.is_file_blocked(target_logo):
+                            backup_dir = self.get_backup_dir()
+                            backup_dir.mkdir(parents=True, exist_ok=True)
+                            dest_bak = backup_dir / f"{item.name}_{target_logo.name}.bak"
+                            dest_bak_generic = backup_dir / f"{target_logo.name}.bak"
+                            if not dest_bak.exists():
+                                shutil.copy2(target_logo, dest_bak)
+                                self.log(f"   Stored original: {dest_bak.name}")
+                            if not dest_bak_generic.exists():
+                                shutil.copy2(target_logo, dest_bak_generic)
+                    except Exception as e:
+                        self.log(f"   ⚠️ Could not backup {target_logo.name}: {e}")
+                        
+                    # Remove read-only attributes before writing
+                    self.remove_readonly(target_logo)
+                    
+                    # Replace file with transparent PNG
+                    try:
+                        logo_bytes = get_transparent_logo_bytes()
+                        target_logo.write_bytes(logo_bytes)
+                        self.log(f"   ✅ Replaced with transparent watermark.")
+                    except Exception as e:
+                        self.log(f"   ❌ Failed to write transparent watermark: {e}")
+                        continue
+                        
+                    # Make Read-Only after replacement
+                    try:
+                        subprocess.run(["attrib", "+r", str(target_logo)], capture_output=True, check=False)
+                    except Exception:
+                        pass
+                    try:
+                        os.chmod(target_logo, 0o444)
+                    except Exception:
+                        pass
+                    self.log(f"   🔒 Set {target_logo.name} to Read-Only.")
+
+            if not found_any:
+                self.log("   ℹ️ No CClogo-w.png found in installed versions (skipped).")
+        except Exception as e:
+            self.log(f"   ⚠️ Error during watermark check: {e}")
+
+    def restore_watermark_logo(self, apps_path):
+        """Restore original CClogo-w.png watermark from backup if available, and unlock."""
+        if not apps_path.exists():
+            return
+            
+        backup_dir = self.get_backup_dir()
+        try:
+            for item in sorted(apps_path.iterdir()):
+                if item.is_dir() and item.name and item.name[0].isdigit():
+                    resources_dir = item / "Resources"
+                    if not resources_dir.exists() or not resources_dir.is_dir():
+                        continue
+                        
+                    target_logo = None
+                    try:
+                        for f in resources_dir.iterdir():
+                            if f.is_file() and f.name.lower() == "cclogo-w.png":
+                                target_logo = f
+                                break
+                    except Exception:
+                        continue
+                        
+                    if not target_logo or not target_logo.exists():
+                        continue
+                        
+                    self.log(f"   Processing watermark: v{item.name}/{target_logo.name}")
+                    try:
+                        self.remove_readonly(target_logo)
+                    except Exception as e:
+                        self.log(f"   ⚠️ Could not unlock {target_logo.name}: {e}")
+                        
+                    # Check for version-specific backup first, then generic backup
+                    bak_file = backup_dir / f"{item.name}_{target_logo.name}.bak"
+                    if not bak_file.exists():
+                        bak_file = backup_dir / f"{target_logo.name}.bak"
+                        
+                    if bak_file.exists() and bak_file.stat().st_size > 1024:
+                        try:
+                            shutil.copy2(bak_file, target_logo)
+                            try:
+                                os.chmod(target_logo, 0o666)
+                            except Exception:
+                                pass
+                            self.log(f"   ✅ Restored original watermark: v{item.name}/{target_logo.name}")
+                        except Exception as e:
+                            self.log(f"   ❌ Restore failed for watermark: {e}")
+                    else:
+                        # Unlock existing file, do not delete
+                        try:
+                            os.chmod(target_logo, 0o666)
+                        except Exception:
+                            pass
+                        self.log(f"   🔓 Unlocked watermark file: v{item.name}/{target_logo.name}")
+        except Exception as e:
+            self.log(f"   ⚠️ Error during watermark restore: {e}")
 
     def verify_locks(self, capcut_path):
         apps_path = capcut_path / "Apps"

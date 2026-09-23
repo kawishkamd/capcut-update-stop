@@ -5,9 +5,10 @@ A utility tool designed to help content creators manage their local CapCut insta
 ## Features
 
 - **Version Persistence**: Locks the configuration to user-specified versions.
+- **Watermark Suppression**: Automatically detects and replaces export watermark logo (`CClogo-w.png`) with a transparent asset and locks it to Read-Only (only if present; never created where not already installed).
 - **Environment Cleanup**: Removes temporary update caches to free up space.
 - **Workflow Stability**: Ensures the editing environment remains consistent by managing update processes.
-- **Restoration**: Includes a full restoration mode to return all settings to their defaults.
+- **Restoration**: Includes a full restoration mode to return all settings and backed-up assets to their defaults.
 - **Installer Management**: Provides direct access to official legacy installer versions hosted by the vendor (v1.0.5 - v5.0.0).
 
 ## Usage
