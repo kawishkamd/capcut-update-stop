@@ -1,0 +1,43 @@
+[package]
+name = "capcut-blocker"
+version = "0.1.0"
+edition = "2021"
+description = "CapCut update blocker & version guard (Rust rewrite)"
+license = "MIT"
+
+# The binary is intentionally Windows-only at runtime, but the LIBRARY (core
+# logic + platform trait + mock) compiles and is unit-tested on any host, so
+# development and CI testing happen on Linux; the real .exe is built in CI.
+[lib]
+name = "capcut_blocker"
+path = "src/lib.rs"
+
+[[bin]]
+name = "capcut-blocker"
+path = "src/main.rs"
+
+[dependencies]
+eframe = { version = "0.37.0", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+# Deliberately minimal. More are added per milestone (see README "Plan"):
+#   download milestone  -> ureq (rustls, no tokio) + sha2
+#   engine milestone    -> thiserror
+#   windows build       -> windows-sys + embed-manifest (build-dep)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11.2"
+thiserror = "2.0.20"
+ureq = { version = "3.5.2", default-features = false, features = ["native-tls"] }
+
+# Size-first release profile ("should be light").
+[profile.release]
+opt-level = "z"      # optimize for binary size
+lto = true           # link-time optimization
+codegen-units = 1    # better optimization at the cost of compile time
+panic = "abort"      # no unwinding tables -> smaller binary
+strip = true         # strip symbols
+
+[build-dependencies]
+embed-manifest = "1.5.1"
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_System_Diagnostics_ToolHelp"] }

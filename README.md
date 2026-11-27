@@ -1,38 +1,48 @@
-# CapCut Version Manager
+# CapCut Update Blocker
 
-A utility tool designed to help content creators manage their local CapCut installation. This application allows users to maintain a specific version of the software for workflow stability, preventing unexpected updates from altering the editing environment during critical projects.
+Lock CapCut to the version you want and stop it from force-updating itself. If a
+CapCut update has ever changed your editing setup or taken away something you relied
+on mid-project, this freezes your version in place until *you* decide to move.
 
-## Features
+It's a small Windows app. It only touches CapCut's files on your own PC, and anything
+it changes can be undone with one click. Not affiliated with CapCut or ByteDance.
 
-- **Version Persistence**: Locks the configuration to user-specified versions.
-- **Watermark Suppression**: Automatically detects and replaces export watermark logo (`CClogo-w.png`) with a transparent asset and locks it to Read-Only (only if present; never created where not already installed).
-- **Environment Cleanup**: Removes temporary update caches to free up space.
-- **Workflow Stability**: Ensures the editing environment remains consistent by managing update processes.
-- **Restoration**: Includes a full restoration mode to return all settings and backed-up assets to their defaults.
-- **Installer Management**: Provides direct access to official legacy installer versions hosted by the vendor (v1.0.5 - v5.0.0).
+## Get it
 
-## Usage
+Download the latest `.exe` from the [Releases page](https://github.com/kawishkamd/capcut-update-stop/releases).
+One file, no installer.
 
-This tool is designed for **Educational Purposes** and **Personal Workflow Management**.
+## Use it
 
-1. **Run**: Launch the application (Administrator privileges required to modify local program files).
-2. **Select Action**: Choose to 'Block Updates' (Lock Configuration) or 'Restore Original' (Reset Configuration).
-3. **Verify**: The tool provides logs of all actions taken on your local system.
+Close CapCut, then right-click the exe and **Run as administrator** (it needs admin
+rights to lock CapCut's files). You get three buttons:
 
-## Download
+- **Block Updates** - freezes your current version and shuts off the auto-updater.
+- **Restore Original** - puts everything back exactly the way it was.
+- **Download Installer** - fetches the official CapCut installer for a specific
+  version, so you can install or roll back to the one you want.
 
-- **Ready-to-use Executable**: [Download via Gumroad](https://gumroad.com/l/capcutversionshield)
-- **Source Code**: Available in this repository for review and personal compilation.
+Click Block and you're set. Want updates back one day? Hit Restore.
 
-## Disclaimer
+### Stronger lock (optional)
 
-**Please Read Carefully:**
+By default it sets CapCut's files to read-only, which stops most updates. If one
+still slips through, tick **Stronger lock** before you block - it adds a Windows
+permission rule the updater can't push past. Restore clears it either way. It's a
+newer option, so do one Block-then-Restore first to be sure it behaves on your
+machine. If a file ever feels stuck afterward, open an admin command prompt and run
+`icacls "<file>" /reset`.
 
-1.  **Not Affiliated**: This software is an independent project and is **not** affiliated with, endorsed by, or connected to ByteDance, CapCut, or any of their subsidiaries.
-2.  **Use at Own Risk**: The software modifies local configuration files (`configure.ini`, `ProductInfo.xml`) on your computer. While tested for safety, the author is not responsible for any data loss or system instability.
-3.  **Terms of Service**: Users are responsible for ensuring that their use of this tool complies with the Terms of Service of any third-party software they are managing.
-4.  **Security Software**: Some antivirus software may flag tools that modify system files. This is expected behavior for configuration managers. Please review the source code provided here to verify its safety.
+## Worth knowing
 
-## License
+- **Close CapCut before running this** - it edits CapCut's config files.
+- While you're blocked you won't get CapCut's newer features or fixes. That's the
+  whole point, just don't forget you did it.
+- Your antivirus might flag it. Anything that modifies another app's files tends to
+  get flagged; the full source is in this repo if you want to look it over.
+- Use at your own risk, and make sure you're fine with CapCut's Terms of Service.
 
-This project is licensed under the [MIT License](LICENSE).
+## Support
+
+Made by one person. If it saved you a headache, [a coffee](https://ko-fi.com/kayz) is
+always appreciated.
